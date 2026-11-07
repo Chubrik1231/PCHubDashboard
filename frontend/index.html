@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>CYBER // PC TELEMETRY HUD</title>
+  
+  <!-- Standalone Mobile PWA Meta -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PC HUD">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#070b14">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+
+  <!-- CDNs: Tailwind, Lucide Icons, Chart.js -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              bg: '#070b14',
+              card: '#0f172a',
+              cyan: '#06b6d4',
+              emerald: '#10b981',
+              violet: '#8b5cf6',
+              rose: '#f43f5e',
+              amber: '#f59e0b',
+            }
+          },
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="bg-cyber-bg text-slate-100 font-mono min-h-screen selection:bg-cyan-500 selection:text-black">
+  <div class="max-w-7xl mx-auto px-3 sm:px-6 py-4 flex flex-col gap-4">
+
+    <!-- Top Navigation / HUD Status Header -->
+    <header class="hud-card rounded-xl p-3.5 sm:p-4 border border-slate-800 shadow-lg flex flex-wrap items-center justify-between gap-3">
+      <div class="hud-corner hud-corner-tl"></div>
+      <div class="hud-corner hud-corner-tr"></div>
+      <div class="hud-corner hud-corner-bl"></div>
+      <div class="hud-corner hud-corner-br"></div>
+
+      <!-- Left: Logo & Host Info -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-cyan-950/70 border border-cyan-500/40 flex items-center justify-center text-cyan-400 box-glow-cyan">
+          <i data-lucide="cpu" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-sm sm:text-base font-bold tracking-wider text-cyan-400 glow-cyan">CYBER//HUD</h1>
+            <span class="text-xs px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-semibold uppercase" id="host-name">PC-NODE</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+            <span class="text-slate-500 font-medium">LAN:</span>
+            <span id="host-ip" class="text-slate-300 font-semibold select-all">127.0.0.1:8080</span>
+            <span class="hidden sm:inline text-slate-600">•</span>
+            <span id="host-os" class="hidden sm:inline text-slate-400">Windows</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Connection Badge, Auth Shield, Wake Lock, Switch PC & Uptime -->
+      <div class="flex items-center gap-2 sm:gap-2.5 ml-auto">
+        <!-- Live Connection Pill -->
+        <div id="conn-badge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 box-glow-emerald">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 live-pulse"></span>
+          <span id="conn-text">LIVE (1s)</span>
+        </div>
+
+        <!-- Persistent Auth Pairing Status Shield -->
+        <div id="auth-shield-badge" class="hidden flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-cyan-950/70 border border-cyan-500/50 text-cyan-300 box-glow-cyan" title="Device Paired & Authenticated">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span class="hidden sm:inline" id="authStatusText">PAIRED</span>
+        </div>
+
+        <!-- Pair New Phone / Host Unlock Button -->
+        <button id="btnHeaderEnablePairing" title="Переключить разрешение подключения новых устройств" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 transition shadow-sm active:scale-95 cursor-pointer">
+          <i data-lucide="shield" id="headerPairingIcon" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span id="headerPairingText" class="text-[10px] sm:text-xs font-mono">Сопряжение: НЕТ</span>
+        </button>
+
+        <!-- Unpair / Forget PC Button -->
+        <button id="btnUnpairDevice" title="Unpair / Forget this PC" class="hidden sm:flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-slate-900 hover:bg-rose-950/80 border border-slate-700 hover:border-rose-500 text-slate-400 hover:text-rose-300 transition shadow-sm active:scale-95 cursor-pointer">
+          <i data-lucide="shield-alert" class="w-3 h-3 text-rose-400"></i>
+          <span class="text-[10px]">Unpair</span>
+        </button>
+
+        <!-- Keep-Awake Screen Toggle Button -->
+        <button id="btnKeepAwake" title="Screen Wake Lock (Active)" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/40 text-amber-300 transition shadow-sm active:scale-95 cursor-pointer">
+          <i data-lucide="sun" id="wakeLockIcon" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span id="wakeLockText" class="hidden sm:inline">Awake ON</span>
+        </button>
+
+        <!-- Switch PC / Disconnect Button -->
+        <button id="btnSwitchServer" title="Switch PC / Rediscover Hosts" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/40 text-cyan-300 transition shadow-sm active:scale-95 cursor-pointer">
+          <i data-lucide="radio" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span class="hidden sm:inline">Switch PC</span>
+        </button>
+
+        <!-- Uptime Pill -->
+        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-900 border border-slate-800 text-slate-300">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span id="system-uptime">00m 00s</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs: Telemetry vs Remote Desktop vs Matrix View -->
+    <nav class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+      <button id="tab-btn-telemetry" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-500 transition tab-active flex items-center gap-2 shrink-0">
+        <i data-lucide="activity" class="w-4 h-4 text-cyan-400"></i>
+        <span>Telemetry HUD</span>
+      </button>
+      <button id="tab-btn-remote" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-slate-700 bg-slate-800 text-slate-400 hover:border-cyan-500 hover:text-cyan-300 transition flex items-center gap-2 shrink-0">
+        <i data-lucide="monitor" class="w-4 h-4 text-emerald-400"></i>
+        <span>Remote Desktop</span>
+        <span class="w-2 h-2 rounded-full bg-cyan-400 live-pulse"></span>
+      </button>
+      <button id="tab-btn-matrix" class="px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border border-slate-700 bg-slate-800 text-slate-400 hover:border-violet-500 hover:text-violet-300 transition flex items-center gap-2 shrink-0">
+        <i data-lucide="layout-grid" class="w-4 h-4 text-violet-400"></i>
+        <span>Matrix (Multi-PC)</span>
+        <span id="matrixHostCountBadge" class="text-[9px] px-1.5 py-0.2 rounded-full bg-violet-950 text-violet-300 border border-violet-800 font-mono">1</span>
+      </button>
+    </nav>
+
+    <!-- Global Power Action Pending Banner (Hidden by default, shown when countdown is active) -->
+    <div id="power-alert-banner" class="hidden hud-card rounded-xl p-3 bg-rose-950/80 border border-rose-500 text-rose-200 flex items-center justify-between gap-3 animate-pulse">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-400"></i>
+        <span class="text-xs sm:text-sm font-bold tracking-wide" id="power-alert-text">
+          PC SHUTDOWN INITIATED: 30s REMAINING
+        </span>
+      </div>
+      <button id="btn-cancel-power-banner" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-bold transition shadow-md">
+        ABORT
+      </button>
+    </div>
+
+    <!-- Main Grid: Telemetry Cards -->
+    <main id="telemetry-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+      <!-- 0. ACTIVE GAME / APP SESSION TRACKER CARD -->
+      <section id="game-session-card" class="col-span-1 md:col-span-2 lg:col-span-3 hud-card game-card-idle rounded-xl p-3.5 sm:p-4 border relative overflow-hidden transition-all duration-300">
+        <div class="hud-corner hud-corner-tl"></div>
+        <div class="hud-corner hud-corner-tr"></div>
+        <div class="hud-corner hud-corner-bl"></div>
+        <div class="hud-corner hud-corner-br"></div>
+
+        <!-- Active Game State (shown when game is detected) -->
+        <div id="game-active-container" class="hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-3 sm:gap-3.5 min-w-0">
+            <!-- Glowing Gamepad Icon -->
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-violet-950/80 border border-violet-500/50 flex items-center justify-center text-violet-400 box-glow-violet shrink-0 game-icon-pulse">
+              <i data-lucide="gamepad-2" class="w-6 h-6 stroke-[2.2]"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-950/80 border border-emerald-500/50 text-emerald-400">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 live-pulse"></span>
+                  <span>GAMING IN PROGRESS</span>
+                </span>
+                <span id="game-process-badge" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 font-mono text-slate-400 uppercase select-all">
+                  cs2.exe
+                </span>
+                <span id="game-fg-badge" class="hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/70 border border-cyan-800 text-cyan-300 font-mono uppercase">
+                  ACTIVE WINDOW
+                </span>
+              </div>
+              <h2 id="game-title" class="text-base sm:text-lg font-black text-slate-100 glow-violet tracking-wide mt-1 truncate max-w-[280px] sm:max-w-md md:max-w-xl">
+                Counter-Strike 2
+              </h2>
+            </div>
+          </div>
+
+          <!-- Live Session Timer -->
+          <div class="flex items-center gap-3 sm:ml-auto border-t sm:border-t-0 border-slate-800/80 pt-2 sm:pt-0 shrink-0">
+            <div class="text-left sm:text-right">
+              <span class="text-[10px] uppercase tracking-wider text-slate-400 block font-mono">SESSION TIME</span>
+              <span id="game-session-time" class="text-xl sm:text-2xl font-black text-cyan-400 font-mono glow-cyan">
+                00:00:00
+              </span>
+            </div>
+            <div class="w-9 h-9 rounded-lg bg-cyan-950/60 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+              <i data-lucide="timer" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Idle Desktop State (shown when no game is running) -->
+        <div id="game-idle-container" class="flex items-center justify-between gap-3 text-slate-400">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-lg bg-slate-900/90 border border-slate-800 flex items-center justify-center text-slate-500 shrink-0">
+              <i data-lucide="monitor" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-500">SYSTEM ACTIVITY</span>
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-slate-500 font-mono uppercase">DESKTOP MODE</span>
+              </div>
+              <p id="game-idle-text" class="text-xs text-slate-400 font-medium mt-0.5 truncate">
+                No game running • Host in desktop mode
+              </p>
+            </div>
+          </div>
+          <div id="game-last-session-container" class="hidden text-right text-[11px] font-mono text-slate-500 sm:block shrink-0">
+            <span class="text-[9px] uppercase tracking-wider text-slate-600 block">LAST PLAYED</span>
+            <span id="game-last-session-text" class="text-slate-400 font-medium">None</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 1. CPU TELEMETRY CARD -->
+      <section class="hud-card rounded-xl p-4 flex flex-col justify-between">
+        <div class="hud-corner hud-corner-tl"></div>
+        <div class="hud-corner hud-corner-tr"></div>
+        <div class="hud-corner hud-corner-bl"></div>
+        <div class="hud-corner hud-corner-br"></div>
+
+        <div>
+          <!-- Card Header -->
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <i data-lucide="cpu" class="w-4 h-4 text-cyan-400"></i>
+              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">CPU Telemetry</h2>
+            </div>
+            <span id="cpu-temp-badge" class="text-xs px-2 py-0.5 rounded bg-slate-900 border border-slate-700/80 text-cyan-300">
+              -- °C
+            </span>
+          </div>
+
+          <!-- Circular Radial Gauge + Overview -->
+          <div class="flex items-center justify-around py-4">
+            <div class="relative w-28 h-28 flex items-center justify-center">
+              <svg class="w-full h-full" viewBox="0 0 100 100">
+                <circle class="radial-progress-bg" cx="50" cy="50" r="40" />
+                <circle id="cpu-radial" class="radial-progress-bar stroke-cyan-400" cx="50" cy="50" r="40"
+                        stroke-dasharray="251.2" stroke-dashoffset="251.2" />
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="cpu-load-num" class="text-2xl font-black text-cyan-400 glow-cyan">0%</span>
+                <span class="text-[10px] text-slate-400 uppercase tracking-wider">LOAD</span>
+              </div>
+            </div>
+
+            <!-- CPU Stats Column -->
+            <div class="flex flex-col gap-2 text-xs">
+              <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+                <span class="text-slate-400 text-[10px] block uppercase">Clock Speed</span>
+                <span id="cpu-freq-text" class="text-sm font-bold text-slate-200">0.00 GHz</span>
+              </div>
+              <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+                <span class="text-slate-400 text-[10px] block uppercase">Cores / Threads</span>
+                <span id="cpu-cores-text" class="text-sm font-bold text-slate-200">8C / 16T</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Per-Core Load Matrix -->
+        <div class="mt-2 pt-2 border-t border-slate-800/80">
+          <div class="flex items-center justify-between text-[10px] text-slate-400 uppercase tracking-wider mb-1.5">
+            <span>Per-Thread Load</span>
+            <span id="cpu-thread-count">16 Threads</span>
+          </div>
+          <div id="cpu-core-grid" class="grid grid-cols-8 gap-1.5">
+            <!-- Dynamic mini core bars injected by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. GPU TELEMETRY CARD (NVIDIA) -->
+      <section class="hud-card rounded-xl p-4 flex flex-col justify-between">
+        <div class="hud-corner hud-corner-tl"></div>
+        <div class="hud-corner hud-corner-tr"></div>
+        <div class="hud-corner hud-corner-bl"></div>
+        <div class="hud-corner hud-corner-br"></div>
+
+        <div>
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+            <div class="flex items-center gap-2 truncate pr-2">
+              <i data-lucide="zap" class="w-4 h-4 text-emerald-400"></i>
+              <h2 id="gpu-name" class="text-xs font-bold uppercase tracking-wider text-slate-300 truncate">
+                NVIDIA GPU
+              </h2>
+            </div>
+            <span id="gpu-source-badge" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-semibold uppercase">
+              NVML
+            </span>
+          </div>
+
+          <!-- Empty GPU State (hidden when GPU active) -->
+          <div id="gpu-empty-state" class="hidden py-8 text-center text-slate-500 text-xs">
+            <i data-lucide="alert-circle" class="w-8 h-8 mx-auto mb-2 text-slate-600"></i>
+            No NVIDIA GPU Detected
+          </div>
+
+          <!-- Active GPU State -->
+          <div id="gpu-active-state">
+            <div class="flex items-center justify-around py-3">
+              <!-- Radial Core Load Gauge -->
+              <div class="relative w-28 h-28 flex items-center justify-center">
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                  <circle class="radial-progress-bg" cx="50" cy="50" r="40" />
+                  <circle id="gpu-radial" class="radial-progress-bar stroke-emerald-400" cx="50" cy="50" r="40"
+                          stroke-dasharray="251.2" stroke-dashoffset="251.2" />
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span id="gpu-load-num" class="text-2xl font-black text-emerald-400 glow-emerald">0%</span>
+                  <span class="text-[10px] text-slate-400 uppercase tracking-wider">CORE</span>
+                </div>
+              </div>
+
+              <!-- GPU Stats Grid -->
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+                  <span class="text-slate-400 text-[10px] block uppercase">Temp</span>
+                  <span id="gpu-temp-text" class="text-sm font-bold text-emerald-300">0 °C</span>
+                </div>
+                <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+                  <span class="text-slate-400 text-[10px] block uppercase">Fan</span>
+                  <span id="gpu-fan-text" class="text-sm font-bold text-slate-200">0%</span>
+                </div>
+                <div class="bg-slate-900/80 p-2 rounded border border-slate-800 col-span-2">
+                  <span class="text-slate-400 text-[10px] block uppercase">Power</span>
+                  <span id="gpu-power-text" class="text-sm font-bold text-slate-200">0W / 0W</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- VRAM Progress Bar -->
+            <div class="pt-2 border-t border-slate-800/80">
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-400 text-[11px] uppercase">VRAM Usage</span>
+                <span id="gpu-vram-text" class="text-slate-200 font-semibold text-[11px]">0.0 / 0.0 GB (0%)</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div id="gpu-vram-bar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. MEMORY (RAM & SWAP) -->
+      <section class="hud-card rounded-xl p-4 flex flex-col justify-between">
+        <div class="hud-corner hud-corner-tl"></div>
+        <div class="hud-corner hud-corner-tr"></div>
+        <div class="hud-corner hud-corner-bl"></div>
+        <div class="hud-corner hud-corner-br"></div>
+
+        <div>
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <i data-lucide="layers" class="w-4 h-4 text-violet-400"></i>
+              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">Memory Telemetry</h2>
+            </div>
+            <span id="ram-percent-badge" class="text-xs px-2 py-0.5 rounded bg-violet-950/60 border border-violet-500/40 text-violet-300 font-bold">
+              0%
+            </span>
+          </div>
+
+          <!-- Main RAM Usage Visualizer -->
+          <div class="py-4 flex flex-col gap-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-400 text-[11px] uppercase tracking-wide">Physical RAM</span>
+                <span id="ram-used-text" class="text-slate-200 font-semibold text-[11px]">0.0 / 0.0 GB</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-slate-800">
+                <div id="ram-bar" class="h-full bg-gradient-to-r from-cyan-500 via-violet-500 to-fuchsia-500 transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <!-- Swap Memory Visualizer -->
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-400 text-[11px] uppercase tracking-wide">Virtual / Pagefile</span>
+                <span id="swap-used-text" class="text-slate-400 font-medium text-[11px]">0.0 / 0.0 GB (0%)</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div id="swap-bar" class="h-full bg-slate-600 transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RAM Detail Badges -->
+        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80 text-xs">
+          <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+            <span class="text-slate-400 text-[10px] block uppercase">Available</span>
+            <span id="ram-avail-text" class="text-sm font-bold text-slate-200">0.0 GB</span>
+          </div>
+          <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+            <span class="text-slate-400 text-[10px] block uppercase">Committed</span>
+            <span id="ram-commit-text" class="text-sm font-bold text-violet-300">0.0 GB</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. NETWORK REAL-TIME -->
+      <section class="hud-card rounded-xl p-4 flex flex-col justify-between md:col-span-2 lg:col-span-2">
+        <div class="hud-corner hud-corner-tl"></div>
+        <div class="hud-corner hud-corner-tr"></div>
+        <div class="hud-corner hud-corner-bl"></div>
+        <div class="hud-corner hud-corner-br"></div>
+
+        <div>
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <i data-lucide="wifi" class="w-4 h-4 text-cyan-400"></i>
+              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">Network I/O Throughput</h2>
+            </div>
+            <div class="flex items-center gap-3 text-xs">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                <span class="text-slate-400 text-[11px]">Down</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-violet-400"></span>
+                <span class="text-slate-400 text-[11px]">Up</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Speed Numbers -->
+          <div class="grid grid-cols-2 gap-3 py-3">
+            <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+              <div>
+                <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Download Speed</span>
+                <span id="net-down-rate" class="text-lg sm:text-xl font-black text-cyan-400 glow-cyan">0.0 KB/s</span>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-cyan-950/80 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+                <i data-lucide="arrow-down" class="w-4 h-4"></i>
+              </div>
+            </div>
+
+            <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+              <div>
+                <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Upload Speed</span>
+                <span id="net-up-rate" class="text-lg sm:text-xl font-black text-violet-400 glow-violet">0.0 KB/s</span>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-violet-950/80 border border-violet-500/40 flex items-center justify-center text-violet-400">
+                <i data-lucide="arrow-up" class="w-4 h-4"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chart.js 30-Second Rolling Graph -->
+          <div class="w-full h-36 sm:h-44 relative">
+            <canvas id="networkChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Cumulative Net Stats -->
+        <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 text-[11px] text-slate-400 mt-2">
+          <span>Total Recv: <b id="net-total-recv" class="text-slate-200">0.00 GB</b></span>
+          <span>Total Sent: <b id="net-total-sent" class="text-slate-200">0.00 GB</b></span>
+        </div>
+      </section>
+
+      <!-- 5. STORAGE (DISKS) -->
+      <section class="hud-card rounded-xl p-4 flex flex-col justify-between">
+        <div class="hud-corner hud-corner-tl"></div>
+        <div class="hud-corner hud-corner-tr"></div>
+        <div class="hud-corner hud-corner-bl"></div>
+        <div class="hud-corner hud-corner-br"></div>
+
+        <div>
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <i data-lucide="hard-drive" class="w-4 h-4 text-amber-400"></i>
+              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">Mounted Drives</h2>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 font-semibold" id="disk-count-badge">
+              0 Disks
+            </span>
+          </div>
+
+          <!-- Dynamic Disk List Container -->
+          <div id="disk-list-container" class="py-2 flex flex-col gap-3">
+            <!-- Disks injected dynamically by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. QUICK ACTIONS & SYSTEM CONTROL -->
+      <section class="hud-card rounded-xl p-4 flex flex-col justify-between md:col-span-2 lg:col-span-3">
+        <div class="hud-corner hud-corner-tl"></div>
+        <div class="hud-corner hud-corner-tr"></div>
+        <div class="hud-corner hud-corner-bl"></div>
+        <div class="hud-corner hud-corner-br"></div>
+
+        <div>
+          <!-- Header -->
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i>
+              <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">Quick Actions & System Control</h2>
+            </div>
+            <span class="text-[10px] text-slate-500 uppercase">Remote Control Hub</span>
+          </div>
+
+          <!-- Control Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
+
+            <!-- Audio Control Subsection -->
+            <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800/90 flex flex-col justify-between gap-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="volume-2" class="w-4 h-4 text-cyan-400"></i>
+                  <span class="text-xs font-semibold text-slate-300">Master Audio</span>
+                </div>
+                <button id="btn-toggle-mute" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition duration-200 bg-slate-800 border-slate-700 text-slate-300 hover:border-cyan-500">
+                  <i id="mute-icon" data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                  <span id="mute-label">ACTIVE</span>
+                </button>
+              </div>
+
+              <!-- Master Volume Slider -->
+              <div>
+                <div class="flex justify-between text-xs mb-1.5">
+                  <span class="text-slate-400 text-[11px]">Volume Level</span>
+                  <span id="volume-val-text" class="text-cyan-400 font-bold text-xs">50%</span>
+                </div>
+                <input id="audio-slider" type="range" min="0" max="100" value="50" class="w-full">
+              </div>
+
+              <!-- Quick Volume Presets -->
+              <div class="grid grid-cols-5 gap-1.5 pt-1">
+                <button class="vol-preset-btn text-[11px] py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition" data-vol="0">0%</button>
+                <button class="vol-preset-btn text-[11px] py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition" data-vol="25">25%</button>
+                <button class="vol-preset-btn text-[11px] py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition" data-vol="50">50%</button>
+                <button class="vol-preset-btn text-[11px] py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition" data-vol="75">75%</button>
+                <button class="vol-preset-btn text-[11px] py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition" data-vol="100">100%</button>
+              </div>
+            </div>
+
+            <!-- Power Control Subsection -->
+            <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-800/90 flex flex-col justify-between gap-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <i data-lucide="power" class="w-4 h-4 text-rose-400"></i>
+                  <span class="text-xs font-semibold text-slate-300">Power Management</span>
+                </div>
+                <span class="text-[10px] text-slate-500 font-mono">Protected Actions</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 py-1">
+                <!-- Sleep Button -->
+                <button id="btn-trigger-sleep" class="flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg bg-violet-950/40 hover:bg-violet-900/60 border border-violet-500/30 hover:border-violet-400 text-violet-300 transition duration-200">
+                  <i data-lucide="moon" class="w-5 h-5 text-violet-400"></i>
+                  <span class="text-xs font-bold">Sleep PC</span>
+                  <span class="text-[10px] text-violet-400/80">15s countdown</span>
+                </button>
+
+                <!-- Shutdown Button -->
+                <button id="btn-trigger-shutdown" class="flex flex-col items-center justify-center gap-1.5 p-3 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/30 hover:border-rose-400 text-rose-300 transition duration-200">
+                  <i data-lucide="power" class="w-5 h-5 text-rose-400"></i>
+                  <span class="text-xs font-bold">Shutdown PC</span>
+                  <span class="text-[10px] text-rose-400/80">30s countdown</span>
+                </button>
+              </div>
+
+              <div class="text-[10px] text-slate-500 text-center">
+                All power commands feature delayed abort countdowns to prevent accidental triggers.
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. SECURITY & DEVICE PAIRING GATEKEEPER CARD -->
+      <section id="security-gatekeeper-card" class="col-span-1 md:col-span-2 lg:col-span-3 hud-card rounded-xl p-4 sm:p-5 border border-slate-800 relative transition-all duration-300">
+        <div class="hud-corner hud-corner-tl"></div>
+        <div class="hud-corner hud-corner-tr"></div>
+        <div class="hud-corner hud-corner-bl"></div>
+        <div class="hud-corner hud-corner-br"></div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800/80">
+          <div class="flex items-center gap-3">
+            <div id="sec-card-icon-container" class="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center text-rose-400 transition-colors duration-300">
+              <i data-lucide="shield-alert" id="sec-card-icon" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-200">Безопасность и сопряжение</h2>
+                <span id="sec-status-badge" class="px-2 py-0.5 rounded text-[10px] font-bold font-mono tracking-wider transition-all duration-300 bg-rose-950/80 border border-rose-500/50 text-rose-300">
+                  НЕТ
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-400 font-mono mt-0.5">
+                Host Access Control & Ephemeral PIN Security Gate
+              </p>
+            </div>
+          </div>
+
+          <!-- Paired Devices Counter & Loopback Status -->
+          <div class="flex items-center gap-2 sm:ml-auto">
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/90 border border-slate-800 text-xs font-mono text-slate-300">
+              <i data-lucide="smartphone" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span class="text-slate-500">Сопряжено:</span>
+              <span id="sec-paired-count" class="font-bold text-cyan-400">0</span>
+            </div>
+            <button id="btn-unpair-all" title="Сбросить все сопряжения (экстренная блокировка)" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-rose-950/80 border border-slate-800 hover:border-rose-500 text-slate-400 hover:text-rose-300 transition text-[11px] font-medium flex items-center gap-1 cursor-pointer">
+              <i data-lucide="shield-x" class="w-3.5 h-3.5 text-rose-400"></i>
+              <span class="hidden sm:inline">Сбросить все</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Toggle Switch Control Row -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-4">
+          <div class="flex flex-col gap-1 max-w-xl">
+            <span class="text-xs font-bold text-slate-200 uppercase tracking-wide">
+              Разрешить подключение новых устройств:
+            </span>
+            <p id="sec-toggle-desc" class="text-xs text-slate-400 leading-relaxed font-sans transition-colors duration-300">
+              Новые устройства не могут подключиться. Окна с кодами на ПК заблокированы.
+            </p>
+            <div id="sec-remote-notice" class="hidden mt-1 flex items-center gap-1.5 text-[11px] text-amber-400 font-mono">
+              <i data-lucide="info" class="w-3.5 h-3.5 shrink-0"></i>
+              <span>Управлять переключателем можно только с самого компьютера (localhost).</span>
+            </div>
+          </div>
+
+          <!-- Cyberpunk / iOS-style Toggle Switch Component -->
+          <div class="flex items-center gap-3 shrink-0 self-start md:self-center">
+            <span id="sec-label-no" class="text-xs font-bold font-mono text-rose-400 transition-colors">НЕТ</span>
+            
+            <button
+              id="btn-toggle-allow-devices"
+              type="button"
+              role="switch"
+              aria-checked="false"
+              class="sec-switch-off relative inline-flex h-8 w-16 shrink-0 cursor-pointer rounded-full border-2 border-slate-700 bg-slate-900 transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500/50 shadow-inner"
+              title="Переключить разрешение подключения новых устройств"
+            >
+              <span class="sr-only">Разрешить новые подключения</span>
+              <span
+                id="sec-toggle-knob"
+                aria-hidden="true"
+                class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-slate-400 shadow-lg ring-0 transition-all duration-300 ease-in-out mt-0.5"
+              ></span>
+            </button>
+
+            <span id="sec-label-yes" class="text-xs font-bold font-mono text-slate-500 transition-colors">ДА</span>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Remote Desktop Dedicated View -->
+    <section id="remote-view" class="hidden flex flex-col gap-4">
+
+      <!-- Remote Toolbar -->
+      <div class="hud-card rounded-xl p-3 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div class="hud-corner hud-corner-tl"></div>
+        <div class="hud-corner hud-corner-tr"></div>
+        <div class="hud-corner hud-corner-bl"></div>
+        <div class="hud-corner hud-corner-br"></div>
+
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-emerald-950/70 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+            <i data-lucide="cast" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-emerald-400 tracking-wider">DIRECTX DESKTOP STREAM</span>
+              <span id="rtc-state-badge" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 font-semibold uppercase">IDLE</span>
+              <span id="encoder-badge" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/50 text-emerald-400 font-bold uppercase tracking-wider">NVENC</span>
+            </div>
+            <span class="text-[10px] text-slate-500 font-mono">WASAPI Loopback • DataChannel Input</span>
+          </div>
+        </div>
+
+        <!-- Quick Remote Action Buttons -->
+        <div class="flex items-center gap-2 ml-auto">
+          <!-- Toggle Virtual Keyboard -->
+          <button id="btn-toggle-keyboard" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-cyan-500 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition">
+            <i data-lucide="keyboard" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span>Keyboard</span>
+          </button>
+
+          <!-- Toggle Fullscreen -->
+          <button id="btn-toggle-fullscreen" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-cyan-500 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition">
+            <i data-lucide="maximize" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span>Fullscreen</span>
+          </button>
+
+          <!-- Reconnect Stream -->
+          <button id="btn-restart-stream" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-cyan-400 transition" title="Reconnect WebRTC">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Video Surface Container -->
+      <div id="videoContainer" class="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-cyan-500/30 shadow-2xl flex items-center justify-center" style="touch-action: none; user-select: none; -webkit-user-select: none;">
+        <video id="remoteVideo" autoplay playsinline webkit-playsinline muted style="width: 100%; height: 100%; object-fit: contain; touch-action: none; user-select: none; -webkit-user-select: none;" class="cursor-crosshair"></video>
+        <audio id="remoteAudio" autoplay playsinline></audio>
+
+        <!-- Audio Autoplay Policy & Stream Initializer Overlay -->
+        <div id="audioAutoplayOverlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+          <div class="w-16 h-16 rounded-full bg-cyan-950/80 border border-cyan-500 flex items-center justify-center text-cyan-400 box-glow-cyan mb-4 animate-bounce">
+            <i data-lucide="play" class="w-8 h-8 ml-0.5"></i>
+          </div>
+          <h2 class="text-base sm:text-lg font-bold text-cyan-300 mb-1">DirectX 60FPS Remote View & Audio</h2>
+          <p class="text-xs text-slate-400 max-w-sm mb-6">Tap below to establish WebRTC media pipeline and unlock audio autoplay on mobile.</p>
+          <button id="btn-start-stream" class="px-6 py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-sm uppercase tracking-wider flex items-center gap-2 shadow-xl box-glow-cyan transition">
+            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+            <span>Start Stream & Unmute</span>
+          </button>
+        </div>
+
+        <!-- Hidden input for Mobile Soft Keyboard trigger -->
+        <input id="virtualKeyboardInput" type="text" class="absolute -top-40 opacity-0 pointer-events-none" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+
+      <!-- Quick Virtual Key Bar -->
+      <div class="hud-card rounded-xl p-3 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+        <div class="text-[11px] text-slate-400 flex items-center gap-2">
+          <i data-lucide="touchpad" class="w-4 h-4 text-cyan-400"></i>
+          <span class="hidden sm:inline">Gestures: 1-finger move • 1-tap Left Click • 2-tap Right Click • 2-finger scroll</span>
+          <span class="sm:hidden">1-tap Left • 2-tap Right • 2-finger scroll</span>
+        </div>
+        <div class="flex items-center gap-1.5 ml-auto">
+          <button class="quick-key-btn px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-mono font-bold" data-key="Escape">ESC</button>
+          <button class="quick-key-btn px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-mono font-bold" data-key="Tab">TAB</button>
+          <button class="quick-key-btn px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-mono font-bold" data-key="Enter">ENTER</button>
+          <button class="quick-key-btn px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-mono font-bold" data-key="Backspace">⌫</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Multi-PC Matrix Grid View -->
+    <section id="matrix-view" class="hidden flex flex-col gap-4">
+
+      <!-- Matrix Header Toolbar -->
+      <div class="hud-card rounded-xl p-3.5 sm:p-4 border border-violet-500/40 bg-slate-900/80 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+        <div class="hud-corner hud-corner-tl"></div>
+        <div class="hud-corner hud-corner-tr"></div>
+        <div class="hud-corner hud-corner-bl"></div>
+        <div class="hud-corner hud-corner-br"></div>
+
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-violet-950/80 border border-violet-500/50 flex items-center justify-center text-violet-400 box-glow-violet shrink-0">
+            <i data-lucide="layout-grid" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-sm sm:text-base font-bold text-violet-300 glow-violet tracking-wider">MULTI-PC MATRIX HUD</h2>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-violet-950 border border-violet-800 text-violet-300 font-mono uppercase">PARALLEL POLLING</span>
+            </div>
+            <p class="text-xs text-slate-400 font-mono mt-0.5">
+              Simultaneous real-time telemetry across local network computers
+            </p>
+          </div>
+        </div>
+
+        <!-- Matrix Controls -->
+        <div class="flex items-center gap-2.5 ml-auto">
+          <button id="btnMatrixScan" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-violet-500 text-slate-200 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+            <i data-lucide="radar" id="matrixScanIcon" class="w-3.5 h-3.5 text-violet-400"></i>
+            <span>Scan Nodes</span>
+          </button>
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono bg-slate-950 border border-slate-800 text-slate-400">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 live-pulse"></span>
+            <span id="matrixPollingRateText">POLLING (1.5s)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Matrix Cards Grid Container -->
+      <div id="matrix-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Rendered dynamically by MatrixEngine in app.js -->
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center py-2 text-slate-600 text-[10px] tracking-wider uppercase">
+      PC Telemetry HUD // High Frequency Real-time Telemetry Engine • Port 8080
+    </footer>
+
+  </div>
+
+  <!-- Confirmation Modal for Delayed Power Actions -->
+  <div id="power-confirm-modal" class="fixed inset-0 modal-backdrop hidden flex items-center justify-center p-4 z-50">
+    <div class="hud-card rounded-2xl p-6 max-w-sm w-full border border-rose-500/50 shadow-2xl relative text-center">
+      <div class="hud-corner hud-corner-tl"></div>
+      <div class="hud-corner hud-corner-tr"></div>
+      <div class="hud-corner hud-corner-bl"></div>
+      <div class="hud-corner hud-corner-br"></div>
+
+      <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-rose-950/80 border border-rose-500 flex items-center justify-center text-rose-400 box-glow-rose">
+        <i data-lucide="alert-octagon" class="w-6 h-6"></i>
+      </div>
+
+      <h3 id="modal-title" class="text-base font-bold text-rose-300 tracking-wide mb-1">CONFIRM ACTION</h3>
+      <p id="modal-desc" class="text-xs text-slate-300 mb-4">Are you sure you want to trigger this action?</p>
+
+      <!-- Countdown Visualizer -->
+      <div class="mb-5">
+        <div class="text-3xl font-black text-rose-400 glow-rose mb-1" id="modal-countdown-num">30s</div>
+        <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
+          <div id="modal-countdown-bar" class="h-full bg-rose-500 transition-all duration-1000" style="width: 100%"></div>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button id="btn-modal-cancel" class="flex-1 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-xs font-bold uppercase transition">
+          ABORT / CANCEL
+        </button>
+        <button id="btn-modal-confirm" class="flex-1 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold uppercase transition shadow-lg">
+          CONFIRM NOW
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Host Not Found / Offline HUD Overlay -->
+  <div id="offlineOverlay" class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4 offline-overlay-hidden">
+    <div class="hud-card rounded-2xl p-6 sm:p-8 max-w-md w-full border border-rose-500/60 shadow-2xl relative text-center flex flex-col items-center">
+      <div class="hud-corner hud-corner-tl"></div>
+      <div class="hud-corner hud-corner-tr"></div>
+      <div class="hud-corner hud-corner-bl"></div>
+      <div class="hud-corner hud-corner-br"></div>
+
+      <!-- Glowing Radar Icon Container -->
+      <div class="relative mb-5 flex items-center justify-center">
+        <div class="w-20 h-20 rounded-full bg-rose-950/80 border-2 border-rose-500 flex items-center justify-center text-rose-400 radar-glow">
+          <i data-lucide="wifi-off" class="w-9 h-9 stroke-[2.2]"></i>
+        </div>
+        <div class="absolute -top-1 -right-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/60 text-amber-300 text-[10px] font-bold tracking-widest uppercase">
+          LAN DROP
+        </div>
+      </div>
+
+      <!-- Primary Title & Status Subtitle -->
+      <div class="mb-3">
+        <span class="text-[10px] font-bold text-rose-400 tracking-widest uppercase px-2 py-0.5 rounded bg-rose-950/60 border border-rose-900/60">
+          SIGNAL TERMINATED
+        </span>
+        <h2 class="text-xl sm:text-2xl font-black text-rose-400 glow-rose tracking-wider mt-2 mb-1">
+          HOST NOT FOUND
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed max-w-xs mx-auto">
+          Make sure your phone is connected to the same Wi-Fi network as your PC (192.168.x.x).
+        </p>
+      </div>
+
+      <!-- Diagnostic Host Target & Countdown Box -->
+      <div class="w-full bg-slate-950/70 border border-slate-800 rounded-xl p-3 mb-5 text-left text-xs font-mono">
+        <div class="flex items-center justify-between text-slate-400 mb-1.5">
+          <span class="text-[10px] uppercase tracking-wider text-slate-500">Target Host</span>
+          <span id="offlineHostTarget" class="text-cyan-400 font-semibold select-all">192.168.x.x:8080</span>
+        </div>
+        <div class="flex items-center justify-between text-slate-400 mb-1.5">
+          <span class="text-[10px] uppercase tracking-wider text-slate-500">State</span>
+          <span id="offlineStateDetail" class="text-rose-400 font-semibold">Unreachable</span>
+        </div>
+        <div class="flex items-center justify-between text-slate-400 pt-2 border-t border-slate-800/80">
+          <span class="text-[10px] uppercase tracking-wider text-slate-500">Auto-Watchdog</span>
+          <span id="offlineRetryCountdown" class="text-amber-400 font-bold">Retrying in 4s...</span>
+        </div>
+      </div>
+
+      <!-- Troubleshooting Hints -->
+      <div class="text-[11px] text-slate-400 space-y-1.5 mb-5 text-left w-full pl-1">
+        <div class="flex items-center gap-2">
+          <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
+          <span>Connect to home Wi-Fi (disable cellular-only)</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
+          <span>Ensure host PC is awake with HUD server active</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons: Retry Connection & Scan For PCs -->
+      <div class="w-full flex flex-col sm:flex-row gap-2.5">
+        <button id="btnOfflineRetry" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-xs sm:text-sm tracking-wider uppercase flex items-center justify-center gap-2 shadow-xl box-glow-rose transition active:scale-95 cursor-pointer">
+          <i id="offlineRetryIcon" data-lucide="refresh-cw" class="w-4 h-4"></i>
+          <span id="offlineRetryBtnText">Retry Connection</span>
+        </button>
+        <button id="btnOfflineScan" class="py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-cyan-500/40 text-cyan-300 font-bold text-xs sm:text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer">
+          <i data-lucide="radar" class="w-4 h-4 text-cyan-400"></i>
+          <span>Scan LAN</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LAN Host Discovery Overlay & Multi-Host Selector -->
+  <div id="discoveryOverlay" class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4 transition-all duration-300 hidden">
+    <div class="hud-card rounded-2xl p-5 sm:p-7 max-w-lg w-full border border-cyan-500/50 shadow-2xl relative text-center flex flex-col items-center">
+      <div class="hud-corner hud-corner-tl"></div>
+      <div class="hud-corner hud-corner-tr"></div>
+      <div class="hud-corner hud-corner-bl"></div>
+      <div class="hud-corner hud-corner-br"></div>
+
+      <!-- Close button (if already connected to a host) -->
+      <button id="btnCloseDiscovery" class="absolute top-4 right-4 text-slate-400 hover:text-cyan-400 p-1.5 rounded-lg border border-slate-800 bg-slate-900/60 hidden cursor-pointer transition">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Animated Circular Radar Scanner -->
+      <div class="radar-scanner-container mb-4">
+        <div class="radar-ring radar-ring-1"></div>
+        <div class="radar-ring radar-ring-2"></div>
+        <div class="radar-crosshair-h"></div>
+        <div class="radar-crosshair-v"></div>
+        <div class="radar-sweep-beam"></div>
+        <div class="radar-blip" style="top: 32%; left: 62%;"></div>
+      </div>
+
+      <!-- Scanner Status -->
+      <div class="mb-4">
+        <span class="text-[10px] font-bold text-cyan-400 tracking-widest uppercase px-2.5 py-0.5 rounded-full bg-cyan-950/70 border border-cyan-500/40">
+          LAN ZERO-CONFIG DISCOVERY
+        </span>
+        <h2 id="discoveryTitle" class="text-lg sm:text-xl font-bold text-cyan-300 glow-cyan tracking-wider mt-2 mb-1">
+          Scanning for PC HUDs on Wi-Fi...
+        </h2>
+        <p id="discoverySubtitle" class="text-xs text-slate-400 font-mono">
+          Probing local network adapters & UDP port 8082
+        </p>
+      </div>
+
+      <!-- Discovered Hosts Container -->
+      <div id="discoveredHostsList" class="w-full flex flex-col gap-2.5 mb-4 max-h-56 overflow-y-auto pr-1">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Manual IP Connect Fallback -->
+      <div class="w-full border-t border-slate-800/80 pt-4 mt-1">
+        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+          <span>Manual IP Connection</span>
+          <span class="text-[10px] text-slate-500 font-mono">Port: 8080</span>
+        </div>
+        <form id="manualConnectForm" class="flex items-center gap-2">
+          <div class="relative flex-1">
+            <i data-lucide="terminal" class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input
+              id="inputManualHost"
+              type="text"
+              placeholder="e.g. 192.168.7.163:8080"
+              class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950/80 border border-slate-800 focus:border-cyan-500 text-xs text-slate-200 placeholder:text-slate-600 font-mono outline-none transition"
+              autocomplete="off"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+          </div>
+          <button
+            type="submit"
+            id="btnManualConnect"
+            class="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-bold text-xs uppercase tracking-wider shadow-lg box-glow-cyan transition flex items-center gap-1.5 shrink-0 cursor-pointer"
+          >
+            <span>Connect</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </form>
+      </div>
+
+      <!-- Scanner Controls -->
+      <div class="w-full flex items-center justify-between mt-4 pt-3 border-t border-slate-800/60 text-xs">
+        <button id="btnRescanHosts" class="flex items-center gap-1.5 text-slate-400 hover:text-cyan-400 transition py-1 px-2.5 rounded border border-slate-800 hover:border-slate-700 cursor-pointer">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="rescanIcon"></i>
+          <span>Rescan Network</span>
+        </button>
+        <span id="discoveryCountLabel" class="text-[11px] text-slate-500 font-mono">
+          0 hosts found
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Device Pairing & Authentication Lock Modal -->
+  <div id="pairingModal" class="fixed inset-0 z-50 modal-backdrop flex items-center justify-center p-4 transition-all duration-300 hidden">
+    <div class="hud-card rounded-2xl p-6 sm:p-8 max-w-md w-full border border-amber-500/60 shadow-2xl relative text-center flex flex-col items-center">
+      <div class="hud-corner hud-corner-tl"></div>
+      <div class="hud-corner hud-corner-tr"></div>
+      <div class="hud-corner hud-corner-bl"></div>
+      <div class="hud-corner hud-corner-br"></div>
+
+      <!-- VIEW A: Remote Phone Lock Screen (when Host toggle is in "НЕТ" position) -->
+      <div id="pairingLockedView" class="hidden w-full flex flex-col items-center">
+        <!-- Glowing Red/Rose Shield Container -->
+        <div class="relative mb-4 flex items-center justify-center">
+          <div class="w-16 h-16 rounded-2xl bg-rose-950/80 border-2 border-rose-500/60 flex items-center justify-center text-rose-400 shadow-xl shadow-rose-950/50">
+            <i data-lucide="shield-x" class="w-8 h-8 stroke-[2.2]"></i>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-center gap-2 mb-2">
+          <span class="text-[10px] font-bold text-rose-400 tracking-widest uppercase px-2.5 py-0.5 rounded-full bg-rose-950/70 border border-rose-500/40">
+            ДОСТУП ЗАБЛОКИРОВАН
+          </span>
+          <span id="pairingLockedHostBadge" class="text-[10px] font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+            PC-NODE
+          </span>
+        </div>
+
+        <h2 class="text-lg sm:text-xl font-black text-rose-300 tracking-wider mb-2">
+          Подключение заблокировано
+        </h2>
+
+        <p class="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed max-w-xs mx-auto mb-6">
+          Этот компьютер не принимает новые устройства. Переключите тумблер в положение «ДА» в настройках на самом ПК.
+        </p>
+
+        <!-- Action Buttons for Locked View -->
+        <div class="w-full flex flex-col gap-2.5">
+          <button
+            type="button"
+            id="btnCheckPairingAgain"
+            class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 hover:from-emerald-500 hover:to-cyan-400 text-black font-black text-xs sm:text-sm tracking-wider uppercase flex items-center justify-center gap-2 shadow-xl box-glow-emerald transition active:scale-95 cursor-pointer"
+          >
+            <i data-lucide="refresh-cw" id="btnCheckPairingAgainIcon" class="w-4 h-4"></i>
+            <span>Проверить снова</span>
+          </button>
+          <button
+            type="button"
+            id="btnLockedSwitchPc"
+            class="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-300 font-bold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer"
+          >
+            Сменить компьютер
+          </button>
+        </div>
+      </div>
+
+      <!-- VIEW B: Active 6-digit PIN Pairing View (when Host toggle is in "ДА" position) -->
+      <div id="pairingPinView" class="w-full flex flex-col items-center">
+        <!-- Glowing Shield Icon Container -->
+        <div class="relative mb-4 flex items-center justify-center">
+          <div class="w-16 h-16 rounded-2xl bg-amber-950/80 border-2 border-amber-500/60 flex items-center justify-center text-amber-400 box-glow-amber">
+            <i data-lucide="shield-alert" class="w-8 h-8 stroke-[2.2]"></i>
+          </div>
+        </div>
+
+        <!-- Title & Subtitle -->
+        <div class="mb-4">
+          <div class="flex items-center justify-center gap-2 mb-1.5">
+            <span class="text-[10px] font-bold text-amber-400 tracking-widest uppercase px-2.5 py-0.5 rounded-full bg-amber-950/70 border border-amber-500/40">
+              SECURITY GATE
+            </span>
+            <span id="pairingHostBadge" class="text-[10px] font-mono text-slate-400 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+              PC-NODE
+            </span>
+          </div>
+          <h2 class="text-lg sm:text-xl font-black text-slate-100 glow-amber tracking-wider mb-1">
+            DEVICE PAIRING REQUIRED
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed max-w-xs mx-auto">
+            Введите 6-значный PIN-код, отображаемый на экране вашего ПК.
+          </p>
+        </div>
+
+        <!-- 6 Individual Digit Input Boxes -->
+        <form id="pairingForm" class="w-full flex flex-col items-center gap-3">
+          <div id="pinInputGroup" class="flex items-center justify-center gap-2 sm:gap-2.5 my-2">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit-box" data-index="0" autocomplete="off" />
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit-box" data-index="1" autocomplete="off" />
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit-box" data-index="2" autocomplete="off" />
+            <span class="text-slate-600 font-mono text-lg font-bold select-none">•</span>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit-box" data-index="3" autocomplete="off" />
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit-box" data-index="4" autocomplete="off" />
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-digit-box" data-index="5" autocomplete="off" />
+          </div>
+
+          <!-- Expiration Countdown & Request New PIN -->
+          <div class="flex items-center justify-between w-full px-1 text-xs font-mono text-slate-400">
+            <span id="pinCountdownText">PIN expires in: <strong id="pinTimerNum" class="text-amber-400">60s</strong></span>
+            <button type="button" id="btnRequestNewPin" class="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition cursor-pointer">
+              Запросить новый PIN
+            </button>
+          </div>
+
+          <!-- Host Gatekeeper Unlock Action -->
+          <div id="hostGatekeeperBox" class="w-full mt-2 pt-2.5 border-t border-slate-800 flex flex-col items-center gap-1.5">
+            <button type="button" id="btnHostEnablePairing" class="w-full py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wider bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition flex items-center justify-center gap-2 cursor-pointer">
+              <i data-lucide="unlock" class="w-3.5 h-3.5"></i>
+              <span>Открыть сопряжение на ПК (60s)</span>
+            </button>
+            <span class="text-[10px] text-slate-500">Разблокирует сопряжение на хосте для защиты от спама</span>
+          </div>
+
+          <!-- Error Message Alert Box -->
+          <div id="pinErrorBox" class="hidden w-full p-2.5 rounded-lg bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs font-mono text-left flex items-center gap-2">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0"></i>
+            <span id="pinErrorText">Invalid PIN. Please try again.</span>
+          </div>
+
+          <!-- Submit & Cancel Buttons -->
+          <div class="w-full flex flex-col sm:flex-row gap-2 mt-2">
+            <button
+              type="submit"
+              id="btnSubmitPin"
+              class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 via-amber-500 to-cyan-500 hover:from-amber-500 hover:to-cyan-400 text-black font-black text-xs sm:text-sm tracking-wider uppercase flex items-center justify-center gap-2 shadow-xl box-glow-amber transition active:scale-95 cursor-pointer"
+            >
+              <i data-lucide="key-round" class="w-4 h-4"></i>
+              <span>Подтвердить PIN</span>
+            </button>
+            <button
+              type="button"
+              id="btnCancelPairing"
+              class="py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-300 font-bold text-xs uppercase tracking-wider transition active:scale-95 cursor-pointer"
+            >
+              Сменить ПК
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>

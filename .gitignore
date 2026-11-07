@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs and artifacts
+build/
+DerivedData/
+dist/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# CocoaPods & Capacitor generated assets during build
+ios/App/Pods/
+ios/App/Podfile.lock
+
+# Operating System & Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.orig
+.idea/
+.vscode/
+
+# Xcode user state
+xcuserdata/
+*.xccheckout
+*.moved-aside

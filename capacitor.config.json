@@ -1,0 +1,9 @@
+{
+  "appId": "com.cyberhud.telemetry",
+  "appName": "PC Telemetry HUD",
+  "webDir": "frontend",
+  "server": {
+    "cleartext": true,
+    "androidScheme": "http"
+  }
+}

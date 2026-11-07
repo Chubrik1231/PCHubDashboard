@@ -1,0 +1,605 @@
+/* Cyberpunk HUD Theme & Custom Layout Styles */
+
+:root {
+  --bg-deep: #070b14;
+  --bg-card: rgba(15, 23, 42, 0.75);
+  --cyan-neon: #06b6d4;
+  --emerald-neon: #10b981;
+  --violet-neon: #8b5cf6;
+  --rose-neon: #f43f5e;
+  --amber-neon: #f59e0b;
+}
+
+/* Safe area insets for mobile edge-to-edge displays (iOS notch & home indicator) */
+body {
+  background-color: var(--bg-deep);
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 15% 70%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
+  background-attachment: fixed;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* Prevent accidental horizontal overflow on all screen sizes */
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* Custom Cyberpunk Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(6, 182, 212, 0.4);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.8);
+}
+
+/* HUD Glassmorphism Cards */
+.hud-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.hud-card:hover {
+  border-color: rgba(6, 182, 212, 0.3);
+  box-shadow: 0 4px 20px -2px rgba(6, 182, 212, 0.12);
+}
+
+/* Cyber corner cuts */
+.hud-corner {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-color: rgba(6, 182, 212, 0.5);
+  pointer-events: none;
+}
+.hud-corner-tl { top: -1px; left: -1px; border-top: 2px solid; border-left: 2px solid; }
+.hud-corner-tr { top: -1px; right: -1px; border-top: 2px solid; border-right: 2px solid; }
+.hud-corner-bl { bottom: -1px; left: -1px; border-bottom: 2px solid; border-left: 2px solid; }
+.hud-corner-br { bottom: -1px; right: -1px; border-bottom: 2px solid; border-right: 2px solid; }
+
+/* Neon Glow Accents */
+.glow-cyan {
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+}
+.glow-emerald {
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+}
+.glow-violet {
+  text-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+}
+.glow-rose {
+  text-shadow: 0 0 10px rgba(244, 63, 94, 0.6);
+}
+
+.box-glow-cyan {
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
+}
+.box-glow-emerald {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.25);
+}
+.box-glow-rose {
+  box-shadow: 0 0 15px rgba(244, 63, 94, 0.25);
+}
+.box-glow-violet {
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.35);
+}
+
+/* SVG Radial Progress Gauges */
+.radial-progress-bg {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 8;
+  fill: transparent;
+}
+
+.radial-progress-bar {
+  stroke-width: 8;
+  stroke-linecap: round;
+  fill: transparent;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.4s ease;
+}
+
+/* Range input cyber styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  height: 8px;
+  outline: none;
+  transition: background 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #06b6d4;
+  cursor: pointer;
+  box-shadow: 0 0 10px #06b6d4;
+  border: 2px solid #ffffff;
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.2);
+  box-shadow: 0 0 16px #06b6d4;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #06b6d4;
+  cursor: pointer;
+  box-shadow: 0 0 10px #06b6d4;
+  border: 2px solid #ffffff;
+}
+
+/* Pulsing Live indicator */
+@keyframes pulse-live {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 6px #10b981); }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.live-pulse {
+  animation: pulse-live 1.8s infinite ease-in-out;
+}
+
+/* Modal overlay backdrop */
+.modal-backdrop {
+  background-color: rgba(7, 11, 20, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+/* Remote Desktop Video & Touch Surface */
+#videoContainer,
+#remoteVideo {
+  touch-action: none !important;
+  -webkit-touch-callout: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  pointer-events: auto !important;
+}
+
+.tab-active {
+  background: rgba(6, 182, 212, 0.18) !important;
+  border-color: rgba(6, 182, 212, 0.6) !important;
+  color: #06b6d4 !important;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.25) !important;
+}
+
+.fullscreen-mode {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #000 !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Host Not Found / Offline State Overlay
+   --------------------------------------------------------------------------- */
+#offlineOverlay {
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: opacity, visibility;
+}
+
+.offline-overlay-hidden {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.offline-overlay-visible {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Pulsing Radar Glow Animation */
+@keyframes radar-pulse {
+  0% {
+    transform: scale(0.92);
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.5), 0 0 20px rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 16px rgba(244, 63, 94, 0.0), 0 0 35px rgba(244, 63, 94, 0.4);
+  }
+  100% {
+    transform: scale(0.92);
+    box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.0), 0 0 20px rgba(245, 158, 11, 0.3);
+  }
+}
+
+.radar-glow {
+  animation: radar-pulse 2.4s infinite ease-in-out;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-fast {
+  animation: spin-slow 0.8s linear infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   LAN Host Discovery & Radar Scanner
+   --------------------------------------------------------------------------- */
+.radar-scanner-container {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 1.5px solid rgba(6, 182, 212, 0.4);
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, rgba(7, 11, 20, 0.85) 75%);
+  overflow: hidden;
+  box-shadow: 0 0 25px rgba(6, 182, 212, 0.2), inset 0 0 15px rgba(6, 182, 212, 0.1);
+}
+
+.radar-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px dashed rgba(6, 182, 212, 0.25);
+  pointer-events: none;
+}
+.radar-ring-1 { width: 45px; height: 45px; }
+.radar-ring-2 { width: 95px; height: 95px; }
+
+.radar-crosshair-h {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(6, 182, 212, 0.25);
+}
+.radar-crosshair-v {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(6, 182, 212, 0.25);
+}
+
+.radar-sweep-beam {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  height: 50%;
+  transform-origin: 0 0;
+  background: conic-gradient(from 0deg, rgba(6, 182, 212, 0.55) 0deg, transparent 65deg);
+  animation: radar-sweep 2.4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes radar-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.radar-blip {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981, 0 0 20px #10b981;
+  animation: radar-blip-pulse 1.8s infinite ease-out;
+}
+
+@keyframes radar-blip-pulse {
+  0% { transform: scale(0.6); opacity: 1; }
+  70% { transform: scale(1.6); opacity: 0.4; }
+  100% { transform: scale(2.0); opacity: 0; }
+}
+
+.host-card {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.host-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(6, 182, 212, 0.7);
+  box-shadow: 0 4px 16px -2px rgba(6, 182, 212, 0.25);
+}
+
+/* ---------------------------------------------------------------------------
+   Active Game / App Session Tracker
+   --------------------------------------------------------------------------- */
+#game-session-card {
+  transition: border-color 0.4s ease, background 0.4s ease, box-shadow 0.4s ease, transform 0.3s ease;
+  will-change: transform, opacity;
+}
+
+.game-card-active {
+  border-color: rgba(139, 92, 246, 0.65) !important;
+  background: radial-gradient(circle at 10% 50%, rgba(139, 92, 246, 0.16) 0%, rgba(15, 23, 42, 0.88) 65%) !important;
+  box-shadow: 0 4px 25px -2px rgba(139, 92, 246, 0.25) !important;
+}
+
+.game-card-idle {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--bg-card);
+}
+
+@keyframes game-icon-pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.5); }
+  50% { transform: scale(1.05); box-shadow: 0 0 16px rgba(139, 92, 246, 0.45), 0 0 25px rgba(16, 185, 129, 0.25); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.0); }
+}
+
+.game-icon-pulse {
+  animation: game-icon-pulse 2.4s infinite ease-in-out;
+}
+
+/* ---------------------------------------------------------------------------
+   Mobile Keep-Awake Screen Wake Lock Indicator
+   --------------------------------------------------------------------------- */
+#btnKeepAwake {
+  user-select: none;
+  -webkit-user-select: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wake-lock-active {
+  background: rgba(120, 53, 15, 0.6) !important;
+  border-color: rgba(245, 158, 11, 0.65) !important;
+  color: #fde68a !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.25) !important;
+}
+
+.wake-lock-active #wakeLockIcon {
+  color: #fbbf24 !important;
+  animation: wake-pulse 2.5s infinite ease-in-out;
+}
+
+.wake-lock-inactive {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-color: rgba(71, 85, 105, 0.5) !important;
+  color: #94a3b8 !important;
+  box-shadow: none !important;
+}
+
+.wake-lock-inactive #wakeLockIcon {
+  color: #64748b !important;
+  animation: none !important;
+}
+
+.wake-lock-unsupported {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+@keyframes wake-pulse {
+  0% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 1px #fbbf24); }
+  50% { transform: rotate(90deg) scale(1.12); filter: drop-shadow(0 0 6px #f59e0b); }
+  100% { transform: rotate(180deg) scale(1); filter: drop-shadow(0 0 1px #fbbf24); }
+}
+
+/* ---------------------------------------------------------------------------
+   Multi-PC Matrix View Mode
+   --------------------------------------------------------------------------- */
+.matrix-pc-card {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--bg-card);
+  will-change: transform, border-color, box-shadow;
+}
+
+.matrix-pc-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(139, 92, 246, 0.6);
+  box-shadow: 0 8px 24px -4px rgba(139, 92, 246, 0.25);
+}
+
+.matrix-pc-active-target {
+  border-color: rgba(6, 182, 212, 0.75) !important;
+  box-shadow: 0 0 20px -2px rgba(6, 182, 212, 0.35) !important;
+}
+
+.matrix-pc-offline {
+  opacity: 0.62;
+  filter: grayscale(0.45);
+  border-color: rgba(244, 63, 94, 0.3) !important;
+}
+
+.matrix-pc-offline:hover {
+  transform: none;
+  border-color: rgba(244, 63, 94, 0.5) !important;
+  box-shadow: 0 4px 12px -2px rgba(244, 63, 94, 0.2);
+}
+
+/* OS Badges */
+.badge-os-win {
+  background: rgba(8, 47, 73, 0.85);
+  border: 1px solid rgba(14, 165, 233, 0.5);
+  color: #7dd3fc;
+}
+
+.badge-os-linux {
+  background: rgba(69, 26, 3, 0.85);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fcd34d;
+}
+
+.badge-os-mac {
+  background: rgba(46, 16, 101, 0.85);
+  border: 1px solid rgba(168, 85, 247, 0.5);
+  color: #d8b4fe;
+}
+
+.badge-os-unknown {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  color: #94a3b8;
+}
+
+/* Matrix Mini Progress Gauges */
+.matrix-gauge-bar {
+  height: 6px;
+  border-radius: 9999px;
+  background: #0f172a;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.matrix-gauge-fill-cpu {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #06b6d4, #10b981);
+  transition: width 0.4s ease;
+}
+
+.matrix-gauge-fill-gpu {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #8b5cf6, #ec4899);
+  transition: width 0.4s ease;
+}
+
+.matrix-gauge-fill-ram {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #3b82f6, #06b6d4);
+  transition: width 0.4s ease;
+}
+
+/* ---------------------------------------------------------------------------
+   Device Pairing & Authentication Security Layer
+   --------------------------------------------------------------------------- */
+.pin-digit-box {
+  width: 44px;
+  height: 58px;
+  background: #090e17;
+  border: 2px solid #334155;
+  border-radius: 12px;
+  color: #06b6d4;
+  font-size: 1.65rem;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-align: center;
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+@media (min-width: 640px) {
+  .pin-digit-box {
+    width: 52px;
+    height: 64px;
+    font-size: 1.85rem;
+  }
+}
+
+.pin-digit-box:focus {
+  border-color: #f59e0b;
+  color: #fbbf24;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.45);
+  transform: translateY(-2px);
+  background: #0f172a;
+}
+
+.pin-digit-box.filled {
+  border-color: #06b6d4;
+  color: #38bdf8;
+}
+
+.pin-digit-box.error {
+  border-color: #f43f5e !important;
+  color: #fda4af !important;
+  box-shadow: 0 0 15px rgba(244, 63, 94, 0.4) !important;
+}
+
+@keyframes pin-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+
+.pin-shake {
+  animation: pin-shake 0.45s ease;
+}
+
+.box-glow-amber {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.35);
+}
+
+.glow-amber {
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+}
+
+/* Matrix Node Locked / Unpaired State */
+.matrix-pc-locked {
+  border-color: rgba(245, 158, 11, 0.5) !important;
+}
+
+.matrix-pc-locked .matrix-node-icon {
+  background: rgba(120, 53, 15, 0.6) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+}
+
+/* Security Gatekeeper Cyberpunk/iOS Toggle Switch */
+.sec-switch-off {
+  background-color: #1e293b !important;
+  border-color: #475569 !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+.sec-switch-off #sec-toggle-knob {
+  transform: translateX(4px) !important;
+  background-color: #f43f5e !important;
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.75);
+}
+.sec-switch-on {
+  background-color: #064e3b !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.35), inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+.sec-switch-on #sec-toggle-knob {
+  transform: translateX(34px) !important;
+  background-color: #10b981 !important;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.95);
+}
+
+
+
+
+
